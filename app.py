@@ -90,48 +90,48 @@ class SQLTrainer:
         return response.content[0].text
 
     def validate_sql(self, query: str, industry: str, question: str) -> Dict:
-    """Validates the SQL query using Claude"""
-    schema_prompt = self.get_schema_prompt(industry)
+        """Validates the SQL query using Claude"""
+        schema_prompt = self.get_schema_prompt(industry)
+        
+        prompt = f"""
+        {schema_prompt}
     
-    prompt = f"""
-    {schema_prompt}
-
-    The stakeholder asked: "{question}"
-    
-    The user provided this SQL query:
-    {query}
-    
-    Please analyze if this query correctly answers the question. Provide:
-    1. Whether the query is correct (yes/no)
-    2. Specific feedback about what's right or wrong
-    3. A hint if the query needs improvement
-    4. The correct query if the user's query is wrong
-    """
-    
-    response = self.client.messages.create(
-        model="claude-3-opus-20240229",
-        max_tokens=500,
-        temperature=0,
-        system="You are a SQL expert providing feedback.",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
-    
-    feedback = response.content[0].text
-    
-    # Parse the response into parts
-    is_correct = "yes" in feedback.lower().split("\n")[0]
-    
-    return {
-        "is_correct": is_correct,
-        "feedback": feedback,
-        "hint": feedback if not is_correct else "",
-        "correct_query": feedback if not is_correct else query
-    }
+        The stakeholder asked: "{question}"
+        
+        The user provided this SQL query:
+        {query}
+        
+        Please analyze if this query correctly answers the question. Provide:
+        1. Whether the query is correct (yes/no)
+        2. Specific feedback about what's right or wrong
+        3. A hint if the query needs improvement
+        4. The correct query if the user's query is wrong
+        """
+        
+        response = self.client.messages.create(
+            model="claude-3-opus-20240229",
+            max_tokens=500,
+            temperature=0,
+            system="You are a SQL expert providing feedback.",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+        
+        feedback = response.content[0].text
+        
+        # Parse the response into parts
+        is_correct = "yes" in feedback.lower().split("\n")[0]
+        
+        return {
+            "is_correct": is_correct,
+            "feedback": feedback,
+            "hint": feedback if not is_correct else "",
+            "correct_query": feedback if not is_correct else query
+        }
 
 def main():
     st.title("Industry-Specific SQL Trainer")
