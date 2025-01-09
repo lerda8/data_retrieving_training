@@ -90,50 +90,48 @@ class SQLTrainer:
         return response.content[0].text
 
     def validate_sql(self, query: str, industry: str, question: str) -> Dict:
-        """Validates the SQL query using Claude"""
-        schema_prompt = self.get_schema_prompt(industry)
-        
-        prompt = f"""
-        {schema_prompt}
+    """Validates the SQL query using Claude"""
+    schema_prompt = self.get_schema_prompt(industry)
+    
+    prompt = f"""
+    {schema_prompt}
 
-        The stakeholder asked: "{question}"
-        
-        The user provided this SQL query:
-        {query}
-        
-        Please analyze the query and provide feedback in the following JSON format:
-        {{
-            "is_correct": true/false,
-            "feedback": "Detailed feedback about what's right or wrong",
-            "hint": "A hint if the query is wrong",
-            "correct_query": "The correct query if the user's query is wrong"
-        }}
-
-        Ensure the output is valid JSON.
-        """
-        
-        response = self.client.messages.create(
-            model="claude-3-opus-20240229",
-            max_tokens=500,
-            temperature=0,
-            system="You are a SQL expert providing feedback. Always respond with valid JSON.",
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        )
-        
-        try:
-            return json.loads(response.content[0].text)
-        except json.JSONDecodeError:
-            return {
-                "is_correct": False,
-                "feedback": "Error processing feedback",
-                "hint": "Please try again",
-                "correct_query": None
+    The stakeholder asked: "{question}"
+    
+    The user provided this SQL query:
+    {query}
+    
+    Please analyze if this query correctly answers the question. Provide:
+    1. Whether the query is correct (yes/no)
+    2. Specific feedback about what's right or wrong
+    3. A hint if the query needs improvement
+    4. The correct query if the user's query is wrong
+    """
+    
+    response = self.client.messages.create(
+        model="claude-3-opus-20240229",
+        max_tokens=500,
+        temperature=0,
+        system="You are a SQL expert providing feedback.",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
             }
+        ]
+    )
+    
+    feedback = response.content[0].text
+    
+    # Parse the response into parts
+    is_correct = "yes" in feedback.lower().split("\n")[0]
+    
+    return {
+        "is_correct": is_correct,
+        "feedback": feedback,
+        "hint": feedback if not is_correct else "",
+        "correct_query": feedback if not is_correct else query
+    }
 
 def main():
     st.title("Industry-Specific SQL Trainer")
@@ -188,10 +186,6 @@ def main():
                     st.success(feedback["feedback"])
                 else:
                     st.error(feedback["feedback"])
-                    if st.button("Show Hint"):
-                        st.info(feedback["hint"])
-                    if st.button("Show Solution"):
-                        st.code(feedback["correct_query"])
 
 if __name__ == "__main__":
     main()
