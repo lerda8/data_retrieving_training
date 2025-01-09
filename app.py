@@ -67,11 +67,11 @@ class SQLTrainer:
 
         Act as a business stakeholder in the {industry} industry.
         Ask for a report that requires SQL to generate.
-        Make it sound natural, like a real stakeholder would ask.
+        Don't add any fluff, just ask for the data.
         The question should require joining at least 2 tables.
         
         Example format:
-        "Hi, I need a report showing [business need]. Can you help me get this data?"
+        "I need a report showing [business need]."
         """
         
         response = self.client.messages.create(
