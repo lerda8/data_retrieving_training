@@ -78,7 +78,7 @@ class SQLTrainer:
         """
         
         response = self.client.messages.create(
-            model="claude-3-sonnet-20241022",
+            model="claude-3-sonnet-20240229",
             max_tokens=150,
             temperature=0.7,
             system="You are a business stakeholder asking for data.",
@@ -112,7 +112,7 @@ class SQLTrainer:
         """
         
         response = self.client.messages.create(
-            model="claude-3-sonnet-20241022",
+            model="claude-3-sonnet-20240229",
             max_tokens=500,
             temperature=0,
             system="You are a SQL expert providing feedback.",
