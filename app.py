@@ -146,13 +146,13 @@ def main():
         st.session_state.industry = None
         st.session_state.current_question = None
     
-    st.title("SQL Trainer 🚀")
+    st.title("SQL Trainer")
     
     # Industry selection (only shown at start)
     if not st.session_state.industry:
         st.header("Select Industry 🏭")
         industry = st.selectbox(
-            "What industry do you work in? 💼",
+            "What industry do you work in?",
             list(trainer.industry_schemas.keys())
         )
         if st.button("Start Training ▶️"):
@@ -162,7 +162,6 @@ def main():
         col1, col2 = st.columns([2, 1])
         
         with col1:
-            st.header("Practice SQL 💪")
             
             # Generate new question with loading spinner
             if st.button("Get New Question 🎯") or not st.session_state.current_question:
@@ -171,7 +170,7 @@ def main():
                         st.session_state.industry
                     )
             
-            st.write("### Business Question 📋")
+            st.write("### Question 📋")
             st.info(st.session_state.current_question)
             
             # SQL input
@@ -193,7 +192,7 @@ def main():
                         st.error("❌ " + feedback["feedback"])
         
         with col2:
-            st.header("Help 🆘")
+            st.header("Help")
             
             # Change Industry button
             if st.button("Change Industry 🔄"):
