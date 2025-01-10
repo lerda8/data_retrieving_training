@@ -205,9 +205,9 @@ def main():
         with col2:
             st.header("Help")
             
-            # Add simple button to view schema URL in new tab
+            # Add link button to view schema URL in new tab
             schema_url = trainer.industry_schemas[st.session_state.industry]["schema_url"]
-            st.markdown(f'<a href="{schema_url}" target="_blank"><button>View Database Schema</button></a>', unsafe_allow_html=True)
+            st.link_button("View Database Schema", schema_url)
             
             st.write("### Tips")
             st.write("""
