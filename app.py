@@ -2,6 +2,7 @@ import streamlit as st
 from typing import Dict, List
 import anthropic
 import json
+import webbrowser
 
 class SQLTrainer:
     def __init__(self):
@@ -38,6 +39,101 @@ class SQLTrainer:
                     "treatments.patient_id -> patients.patient_id"
                 ]
             }
+        }
+
+    def get_schema_prompt(self, industry: str) -> str:
+        """Creates a detailed prompt describing the database schema"""
+        schema = self.industry_schemas.get(industry)
+        if not schema:
+            return "Industry not found"
+            
+        prompt = f"Database Schema for {industry.title()}:\n\n"
+        
+        # Add tables
+        prompt += "Tables:\n"
+        for table, columns in schema["tables"].items():
+            prompt += f"- {table} ({', '.join(columns)})\n"
+        
+        # Add relationships
+        prompt += "\nRelationships:\n"
+        for rel in schema["relationships"]:
+            prompt += f"- {rel}\n"
+            
+        return prompt
+
+    def generate_stakeholder_question(self, industry: str) -> str:
+        """Generates a business question using Claude"""
+        schema_prompt = self.get_schema_prompt(industry)
+        
+        prompt = f"""
+        {schema_prompt}
+
+        Act as a business stakeholder in the {industry} industry.
+        Ask for a report that requires SQL to generate.
+        Don't add any fluff, just ask for the data.
+        The question should require joining at least 2 tables.
+        
+        Example format:
+        "I need a report showing [business need]."
+        """
+        
+        response = self.client.messages.create(
+            model="claude-3-opus-20240229",
+            max_tokens=150,
+            temperature=0.7,
+            system="You are a business stakeholder asking for data.",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+        
+        return response.content[0].text
+
+    def validate_sql(self, query: str, industry: str, question: str) -> Dict:
+        """Validates the SQL query using Claude"""
+        schema_prompt = self.get_schema_prompt(industry)
+        
+        prompt = f"""
+        {schema_prompt}
+    
+        The stakeholder asked: "{question}"
+        
+        The user provided this SQL query:
+        {query}
+        
+        Please analyze if this query correctly answers the question. Provide:
+        1. Whether the query is correct (yes/no)
+        2. Specific feedback about what's right or wrong
+        3. A hint if the query needs improvement
+        4. The correct query if the user's query is wrong
+        """
+        
+        response = self.client.messages.create(
+            model="claude-3-opus-20240229",
+            max_tokens=500,
+            temperature=0,
+            system="You are a SQL expert providing feedback.",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+        
+        feedback = response.content[0].text
+        
+        # Parse the response into parts
+        is_correct = "yes" in feedback.lower().split("\n")[0]
+        
+        return {
+            "is_correct": is_correct,
+            "feedback": feedback,
+            "hint": feedback if not is_correct else "",
+            "correct_query": feedback if not is_correct else query
         }
 
 def main():
@@ -108,9 +204,11 @@ def main():
         
         with col2:
             st.header("Help")
-            # Add link to view schema
+            
+            # Add simple button to open schema URL
             schema_url = trainer.industry_schemas[st.session_state.industry]["schema_url"]
-            st.markdown(f'<a href="{schema_url}" target="_blank" class="button">View Database Schema</a>', unsafe_allow_html=True)
+            if st.button("View Database Schema"):
+                st.markdown(f'<script>window.open("{schema_url}", "_blank");</script>', unsafe_allow_html=True)
             
             st.write("### Tips")
             st.write("""
@@ -118,27 +216,6 @@ def main():
             - Remember to use appropriate WHERE clauses
             - Consider using aggregations when needed
             """)
-
-            # Add custom CSS for the button
-            st.markdown("""
-                <style>
-                .button {
-                    display: inline-block;
-                    padding: 0.5rem 1rem;
-                    background-color: #4CAF50;
-                    color: white !important;
-                    text-decoration: none;
-                    border-radius: 4px;
-                    text-align: center;
-                    margin: 0.5rem 0;
-                }
-                .button:hover {
-                    background-color: #45a049;
-                    color: white !important;
-                    text-decoration: none;
-                }
-                </style>
-                """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
