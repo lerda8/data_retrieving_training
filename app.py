@@ -150,7 +150,7 @@ def main():
     
     # Industry selection (only shown at start)
     if not st.session_state.industry:
-        st.header("Select Industry")
+        st.header("Select Industry 🏭")
         industry = st.selectbox(
             "What industry do you work in?",
             list(trainer.industry_schemas.keys())
@@ -180,7 +180,7 @@ def main():
             if st.button("Submit Query"):
                 if user_query:
                     # Add loading spinner for query validation
-                    with st.spinner('Validating your query...'):
+                    with st.spinner('Analyzing your SQL code...📈'):
                         feedback = trainer.validate_sql(
                             user_query,
                             st.session_state.industry,
