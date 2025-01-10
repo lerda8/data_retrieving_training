@@ -4,73 +4,41 @@ import anthropic
 import json
 
 class SQLTrainer:
-    # [Previous SQLTrainer class implementation remains the same until get_schema_prompt]
-    
-    def get_schema_diagram_url(self, industry: str) -> str:
-        """Returns the URL for the schema diagram"""
-        urls = {
-            "logistics": "https://claude.site/artifacts/bf15ac3a-7ad0-4693-80ab-0bdcfa1cd2ae",
-            "healthcare": "https://claude.site/artifacts/96e82497-f107-4e25-97c1-220b727b1c3b"
+    def __init__(self):
+        if 'ANTHROPIC_API_KEY' not in st.secrets:
+            raise RuntimeError("ANTHROPIC_API_KEY not found in secrets.toml")
+            
+        self.client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+        self.industry_schemas: Dict[str, Dict] = {
+            "logistics": {
+                "schema_url": "https://claude.site/artifacts/bf15ac3a-7ad0-4693-80ab-0bdcfa1cd2ae",
+                "tables": {
+                    "warehouses": ["warehouse_id", "name", "location", "capacity"],
+                    "inventory": ["item_id", "warehouse_id", "product_name", "quantity", "reorder_point"],
+                    "shipments": ["shipment_id", "origin_warehouse", "destination", "status", "carrier_id"],
+                    "carriers": ["carrier_id", "name", "service_level", "cost_per_mile"]
+                },
+                "relationships": [
+                    "inventory.warehouse_id -> warehouses.warehouse_id",
+                    "shipments.origin_warehouse -> warehouses.warehouse_id",
+                    "shipments.carrier_id -> carriers.carrier_id"
+                ]
+            },
+            "healthcare": {
+                "schema_url": "https://claude.site/artifacts/96e82497-f107-4e25-97c1-220b727b1c3b",
+                "tables": {
+                    "patients": ["patient_id", "name", "dob", "insurance_id"],
+                    "appointments": ["appointment_id", "patient_id", "doctor_id", "date", "status"],
+                    "doctors": ["doctor_id", "name", "specialty", "department"],
+                    "treatments": ["treatment_id", "patient_id", "doctor_id", "diagnosis", "date"]
+                },
+                "relationships": [
+                    "appointments.patient_id -> patients.patient_id",
+                    "appointments.doctor_id -> doctors.doctor_id",
+                    "treatments.patient_id -> patients.patient_id"
+                ]
+            }
         }
-        return urls.get(industry, "")
-
-def show_schema_page(trainer: SQLTrainer, industry: str):
-    """Displays the schema visualization page"""
-    st.title(f"{industry.title()} Database Schema")
-    
-    # Display the diagram
-    diagram_url = trainer.get_schema_diagram_url(industry)
-    st.write(f"[View Full Database Diagram]({diagram_url})")
-    
-    # Add a button to return to the main page
-    if st.button("Return to SQL Practice"):
-        st.session_state.show_schema = False
-        st.rerun()
-
-def show_main_page(trainer: SQLTrainer):
-    """Displays the main SQL practice page"""
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.header("Practice SQL")
-        # Generate new question
-        if st.button("Get New Question") or not st.session_state.current_question:
-            st.session_state.current_question = trainer.generate_stakeholder_question(
-                st.session_state.industry
-            )
-        
-        st.write("### Business Question:")
-        st.info(st.session_state.current_question)
-        
-        # SQL input
-        user_query = st.text_area("Your SQL Query:", height=150)
-        
-        if st.button("Submit Query"):
-            if user_query:
-                feedback = trainer.validate_sql(
-                    user_query,
-                    st.session_state.industry,
-                    st.session_state.current_question
-                )
-                
-                if feedback["is_correct"]:
-                    st.success(feedback["feedback"])
-                else:
-                    st.error(feedback["feedback"])
-    
-    with col2:
-        st.header("Help")
-        # Add button to view schema
-        if st.button("View Database Schema"):
-            st.session_state.show_schema = True
-            st.rerun()
-        
-        st.write("### Tips")
-        st.write("""
-        - Make sure to include all necessary JOINs
-        - Remember to use appropriate WHERE clauses
-        - Consider using aggregations when needed
-        """)
 
 def main():
     st.set_page_config(layout="wide")
@@ -84,10 +52,7 @@ def main():
     # Initialize session state
     if 'industry' not in st.session_state:
         st.session_state.industry = None
-    if 'current_question' not in st.session_state:
         st.session_state.current_question = None
-    if 'show_schema' not in st.session_state:
-        st.session_state.show_schema = False
     
     # Sidebar
     with st.sidebar:
@@ -108,15 +73,72 @@ def main():
             if st.button("Change Industry"):
                 st.session_state.industry = None
                 st.session_state.current_question = None
-                st.session_state.show_schema = False
                 st.rerun()
     
     # Main content area
     if st.session_state.industry:
-        if st.session_state.show_schema:
-            show_schema_page(trainer, st.session_state.industry)
-        else:
-            show_main_page(trainer)
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            st.header("Practice SQL")
+            # Generate new question
+            if st.button("Get New Question") or not st.session_state.current_question:
+                st.session_state.current_question = trainer.generate_stakeholder_question(
+                    st.session_state.industry
+                )
+            
+            st.write("### Business Question:")
+            st.info(st.session_state.current_question)
+            
+            # SQL input
+            user_query = st.text_area("Your SQL Query:", height=150)
+            
+            if st.button("Submit Query"):
+                if user_query:
+                    feedback = trainer.validate_sql(
+                        user_query,
+                        st.session_state.industry,
+                        st.session_state.current_question
+                    )
+                    
+                    if feedback["is_correct"]:
+                        st.success(feedback["feedback"])
+                    else:
+                        st.error(feedback["feedback"])
+        
+        with col2:
+            st.header("Help")
+            # Add link to view schema
+            schema_url = trainer.industry_schemas[st.session_state.industry]["schema_url"]
+            st.markdown(f'<a href="{schema_url}" target="_blank" class="button">View Database Schema</a>', unsafe_allow_html=True)
+            
+            st.write("### Tips")
+            st.write("""
+            - Make sure to include all necessary JOINs
+            - Remember to use appropriate WHERE clauses
+            - Consider using aggregations when needed
+            """)
+
+            # Add custom CSS for the button
+            st.markdown("""
+                <style>
+                .button {
+                    display: inline-block;
+                    padding: 0.5rem 1rem;
+                    background-color: #4CAF50;
+                    color: white !important;
+                    text-decoration: none;
+                    border-radius: 4px;
+                    text-align: center;
+                    margin: 0.5rem 0;
+                }
+                .button:hover {
+                    background-color: #45a049;
+                    color: white !important;
+                    text-decoration: none;
+                }
+                </style>
+                """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
