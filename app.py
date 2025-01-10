@@ -110,7 +110,7 @@ def main():
             st.header("Help")
             # Add link to view schema
             schema_url = trainer.industry_schemas[st.session_state.industry]["schema_url"]
-            st.markdown(f'<a href="{schema_url}" target="_blank" class="button">View Database Schema</a>', unsafe_allow_html=True)
+            st.button(f'<a href="{schema_url}" target="_blank" class="button">View Database Schema</a>', unsafe_allow_html=True)
             
             st.write("### Tips")
             st.write("""
@@ -118,6 +118,7 @@ def main():
             - Remember to use appropriate WHERE clauses
             - Consider using aggregations when needed
             """)
+
 
 if __name__ == "__main__":
     main()
