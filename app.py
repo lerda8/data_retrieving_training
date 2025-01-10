@@ -163,11 +163,13 @@ def main():
         
         with col1:
             st.header("Practice SQL")
-            # Generate new question
+            
+            # Generate new question with loading spinner
             if st.button("Get New Question") or not st.session_state.current_question:
-                st.session_state.current_question = trainer.generate_stakeholder_question(
-                    st.session_state.industry
-                )
+                with st.spinner('Generating new question...'):
+                    st.session_state.current_question = trainer.generate_stakeholder_question(
+                        st.session_state.industry
+                    )
             
             st.write("### Business Question:")
             st.info(st.session_state.current_question)
@@ -177,11 +179,13 @@ def main():
             
             if st.button("Submit Query"):
                 if user_query:
-                    feedback = trainer.validate_sql(
-                        user_query,
-                        st.session_state.industry,
-                        st.session_state.current_question
-                    )
+                    # Add loading spinner for query validation
+                    with st.spinner('Validating your query...'):
+                        feedback = trainer.validate_sql(
+                            user_query,
+                            st.session_state.industry,
+                            st.session_state.current_question
+                        )
                     
                     if feedback["is_correct"]:
                         st.success(feedback["feedback"])
