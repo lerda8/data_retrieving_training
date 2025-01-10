@@ -69,6 +69,7 @@ class SQLTrainer:
         Ask for a report that requires SQL to generate.
         Don't add any fluff, just ask for the data.
         The question should be simple.
+        Only max 2 joins, SUM(), COUNT(), MIN(), MAX() functions should be needed.
         
         Example format:
         "I need a report showing [business need]."
