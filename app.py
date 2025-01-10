@@ -61,81 +61,82 @@ class SQLTrainer:
             
         return prompt
 
-       def generate_stakeholder_question(self, industry: str) -> str:
-            """Generates a business question using Claude"""
-            schema_prompt = self.get_schema_prompt(industry)
-            
-            prompt = f"""
-            {schema_prompt}
+    def generate_stakeholder_question(self, industry: str) -> str:
+        """Generates a business question using Claude"""
+        schema_prompt = self.get_schema_prompt(industry)
         
-            Act as a business stakeholder in the {industry} industry.
-            Ask for a report that requires SQL to generate.
-            Don't add any fluff, just ask for the data.
-            The question should require joining at least 2 tables.
-            
-            Example format:
-            "I need a report showing [business need]."
-            """
-            
-            response = self.client.messages.create(
-                model="claude-3-sonnet-20241022",
-                max_tokens=150,
-                temperature=0.7,
-                system="You are a business stakeholder asking for data.",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ]
-            )
-            
-            return response.content[0].text
+        prompt = f"""
+        {schema_prompt}
     
-        def validate_sql(self, query: str, industry: str, question: str) -> Dict:
-            """Validates the SQL query using Claude"""
-            schema_prompt = self.get_schema_prompt(industry)
-            
-            prompt = f"""
-            {schema_prompt}
+        Act as a business stakeholder in the {industry} industry.
+        Ask for a report that requires SQL to generate.
+        Don't add any fluff, just ask for the data.
+        The question should require joining at least 2 tables.
         
-            The stakeholder asked: "{question}"
-            
-            The user provided this SQL query:
-            {query}
-            
-            Please analyze if this query correctly answers the question. Provide:
-            1. Whether the query is correct (yes/no)
-            2. Specific feedback about what's right or wrong
-            3. A hint if the query needs improvement
-            4. The correct query if the user's query is wrong
-            """
-            
-            response = self.client.messages.create(
-                model="claude-3-sonnet-20241022",
-                max_tokens=500,
-                temperature=0,
-                system="You are a SQL expert providing feedback.",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ]
-            )
-            
-            feedback = response.content[0].text
-            
-            # Parse the response into parts
-            is_correct = "yes" in feedback.lower().split("\n")[0]
-            
-            return {
-                "is_correct": is_correct,
-                "feedback": feedback,
-                "hint": feedback if not is_correct else "",
-                "correct_query": feedback if not is_correct else query
-            }
+        Example format:
+        "I need a report showing [business need]."
+        """
+        
+        response = self.client.messages.create(
+            model="claude-3-sonnet-20241022",
+            max_tokens=150,
+            temperature=0.7,
+            system="You are a business stakeholder asking for data.",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+        
+        return response.content[0].text
 
+    def validate_sql(self, query: str, industry: str, question: str) -> Dict:
+        """Validates the SQL query using Claude"""
+        schema_prompt = self.get_schema_prompt(industry)
+        
+        prompt = f"""
+        {schema_prompt}
+    
+        The stakeholder asked: "{question}"
+        
+        The user provided this SQL query:
+        {query}
+        
+        Please analyze if this query correctly answers the question. Provide:
+        1. Whether the query is correct (yes/no)
+        2. Specific feedback about what's right or wrong
+        3. A hint if the query needs improvement
+        4. The correct query if the user's query is wrong
+        """
+        
+        response = self.client.messages.create(
+            model="claude-3-sonnet-20241022",
+            max_tokens=500,
+            temperature=0,
+            system="You are a SQL expert providing feedback.",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+        
+        feedback = response.content[0].text
+        
+        # Parse the response into parts
+        is_correct = "yes" in feedback.lower().split("\n")[0]
+        
+        return {
+            "is_correct": is_correct,
+            "feedback": feedback,
+            "hint": feedback if not is_correct else "",
+            "correct_query": feedback if not is_correct else query
+        }
+
+    
 def main():
     st.set_page_config(layout="wide")
     
