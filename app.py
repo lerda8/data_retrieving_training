@@ -206,6 +206,12 @@ def main():
         with col2:
             st.header("Help")
             
+            # Duplicate the "Change Industry" button
+            if st.button("Change Industry", key="change_industry_col2"):  # Added unique key
+                st.session_state.industry = None
+                st.session_state.current_question = None
+                st.rerun()
+            
             # Add link button to view schema URL in new tab
             schema_url = trainer.industry_schemas[st.session_state.industry]["schema_url"]
             st.link_button("View Database Schema", schema_url)
