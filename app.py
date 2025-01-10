@@ -71,7 +71,7 @@ class SQLTrainer:
         Act as a business stakeholder in the {industry} industry.
         Ask for a report that requires SQL to generate.
         Don't add any fluff, just ask for the data.
-        The question should require joining at least 2 tables.
+        The question should be simple.
         
         Example format:
         "I need a report showing [business need]."
