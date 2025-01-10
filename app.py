@@ -159,10 +159,12 @@ def main():
     
     # Main training interface
     else:
-        # Show schema button
-        if st.button("Show Database Schema"):
+        # Move schema to sidebar
+        with st.sidebar:
+            st.header("Database Schema")
             st.code(trainer.get_schema_prompt(st.session_state.industry))
         
+        # Main content area
         # Generate new question
         if st.button("Get New Question") or not st.session_state.current_question:
             st.session_state.current_question = trainer.generate_stakeholder_question(
