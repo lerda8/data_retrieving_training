@@ -44,7 +44,7 @@ class SQLTrainer:
         if not schema:
             return "Industry not found"
             
-        prompt = f"You are working with a {industry} database with the following structure:\n\n"
+        prompt = f"Database Schema for {industry.title()}:\n\n"
         
         # Add tables
         prompt += "Tables:\n"
@@ -58,9 +58,13 @@ class SQLTrainer:
             
         return prompt
 
+    def get_claude_prompt(self, industry: str) -> str:
+        """Creates the full prompt including schema for Claude"""
+        return f"""You are working with a {industry} database with the following structure:\n\n{self.get_schema_prompt(industry)}"""
+
     def generate_stakeholder_question(self, industry: str) -> str:
         """Generates a business question using Claude"""
-        schema_prompt = self.get_schema_prompt(industry)
+        schema_prompt = self.get_claude_prompt(industry)
         
         prompt = f"""
         {schema_prompt}
@@ -91,7 +95,7 @@ class SQLTrainer:
 
     def validate_sql(self, query: str, industry: str, question: str) -> Dict:
         """Validates the SQL query using Claude"""
-        schema_prompt = self.get_schema_prompt(industry)
+        schema_prompt = self.get_claude_prompt(industry)
         
         prompt = f"""
         {schema_prompt}
@@ -134,7 +138,7 @@ class SQLTrainer:
         }
 
 def main():
-    st.title("Industry-Specific SQL Trainer")
+    st.set_page_config(layout="wide")
     
     try:
         trainer = SQLTrainer()
@@ -147,47 +151,70 @@ def main():
         st.session_state.industry = None
         st.session_state.current_question = None
     
-    # Industry selection (only shown at start)
-    if not st.session_state.industry:
-        industry = st.selectbox(
-            "What industry do you work in?",
-            list(trainer.industry_schemas.keys())
-        )
-        if st.button("Start Training"):
-            st.session_state.industry = industry
-            st.rerun()
-    
-    # Main training interface
-    else:
-        # Move schema to sidebar
-        with st.sidebar:
-            st.header("Database Schema")
-            st.code(trainer.get_schema_prompt(st.session_state.industry))
+    # Sidebar
+    with st.sidebar:
+        st.title("SQL Trainer")
         
-        # Main content area
-        # Generate new question
-        if st.button("Get New Question") or not st.session_state.current_question:
-            st.session_state.current_question = trainer.generate_stakeholder_question(
-                st.session_state.industry
+        # Industry selection (only shown at start)
+        if not st.session_state.industry:
+            st.header("Select Industry")
+            industry = st.selectbox(
+                "What industry do you work in?",
+                list(trainer.industry_schemas.keys())
             )
+            if st.button("Start Training"):
+                st.session_state.industry = industry
+                st.rerun()
+        else:
+            # Show schema in an expander
+            with st.expander("📚 View Database Schema", expanded=False):
+                st.code(trainer.get_schema_prompt(st.session_state.industry))
+            
+            # Add option to change industry
+            if st.button("Change Industry"):
+                st.session_state.industry = None
+                st.session_state.current_question = None
+                st.rerun()
+    
+    # Main content area
+    if st.session_state.industry:
+        col1, col2 = st.columns([2, 1])
         
-        st.write("Stakeholder:", st.session_state.current_question)
-        
-        # SQL input
-        user_query = st.text_area("Your SQL Query:", height=150)
-        
-        if st.button("Submit"):
-            if user_query:
-                feedback = trainer.validate_sql(
-                    user_query,
-                    st.session_state.industry,
-                    st.session_state.current_question
+        with col1:
+            st.header("Practice SQL")
+            # Generate new question
+            if st.button("Get New Question") or not st.session_state.current_question:
+                st.session_state.current_question = trainer.generate_stakeholder_question(
+                    st.session_state.industry
                 )
-                
-                if feedback["is_correct"]:
-                    st.success(feedback["feedback"])
-                else:
-                    st.error(feedback["feedback"])
+            
+            st.write("### Business Question:")
+            st.info(st.session_state.current_question)
+            
+            # SQL input
+            user_query = st.text_area("Your SQL Query:", height=150)
+            
+            if st.button("Submit Query"):
+                if user_query:
+                    feedback = trainer.validate_sql(
+                        user_query,
+                        st.session_state.industry,
+                        st.session_state.current_question
+                    )
+                    
+                    if feedback["is_correct"]:
+                        st.success(feedback["feedback"])
+                    else:
+                        st.error(feedback["feedback"])
+        
+        with col2:
+            st.header("Tips")
+            st.write("""
+            - Use the schema in the sidebar to reference tables and columns
+            - Make sure to include all necessary JOINs
+            - Remember to use appropriate WHERE clauses
+            - Consider using aggregations when needed
+            """)
 
 if __name__ == "__main__":
     main()
