@@ -146,41 +146,41 @@ def main():
         st.session_state.industry = None
         st.session_state.current_question = None
     
-    st.title("SQL Trainer")
+    st.title("SQL Trainer 🚀")
     
     # Industry selection (only shown at start)
     if not st.session_state.industry:
         st.header("Select Industry 🏭")
         industry = st.selectbox(
-            "What industry do you work in?",
+            "What industry do you work in? 💼",
             list(trainer.industry_schemas.keys())
         )
-        if st.button("Start Training"):
+        if st.button("Start Training ▶️"):
             st.session_state.industry = industry
             st.rerun()
     else:
         col1, col2 = st.columns([2, 1])
         
         with col1:
-            st.header("Practice SQL")
+            st.header("Practice SQL 💪")
             
             # Generate new question with loading spinner
-            if st.button("Get New Question") or not st.session_state.current_question:
-                with st.spinner('Generating new question...'):
+            if st.button("Get New Question 🎯") or not st.session_state.current_question:
+                with st.spinner('Generating new question... 🤔'):
                     st.session_state.current_question = trainer.generate_stakeholder_question(
                         st.session_state.industry
                     )
             
-            st.write("### Business Question:")
+            st.write("### Business Question 📋")
             st.info(st.session_state.current_question)
             
             # SQL input
-            user_query = st.text_area("Your SQL Query:", height=150)
+            user_query = st.text_area("Your SQL Query: ⌨️", height=150)
             
-            if st.button("Submit Query"):
+            if st.button("Submit Query 🚀"):
                 if user_query:
                     # Add loading spinner for query validation
-                    with st.spinner('Analyzing your SQL code...📈'):
+                    with st.spinner('Analyzing your SQL code... 🔍'):
                         feedback = trainer.validate_sql(
                             user_query,
                             st.session_state.industry,
@@ -188,28 +188,28 @@ def main():
                         )
                     
                     if feedback["is_correct"]:
-                        st.success(feedback["feedback"])
+                        st.success("🎉 " + feedback["feedback"])
                     else:
-                        st.error(feedback["feedback"])
+                        st.error("❌ " + feedback["feedback"])
         
         with col2:
-            st.header("Help")
+            st.header("Help 🆘")
             
             # Change Industry button
-            if st.button("Change Industry"):
+            if st.button("Change Industry 🔄"):
                 st.session_state.industry = None
                 st.session_state.current_question = None
                 st.rerun()
             
             # Add link button to view schema URL in new tab
             schema_url = trainer.industry_schemas[st.session_state.industry]["schema_url"]
-            st.link_button("View Database Schema", schema_url)
+            st.link_button("View Database Schema 📊", schema_url)
             
-            st.write("### Tips")
+            st.write("### Tips 💡")
             st.write("""
-            - Make sure to include all necessary JOINs
-            - Remember to use appropriate WHERE clauses
-            - Consider using aggregations when needed
+            - 🔗 Make sure to include all necessary JOINs
+            - 🎯 Remember to use appropriate WHERE clauses
+            - 📊 Consider using aggregations when needed
             """)
 
 if __name__ == "__main__":
