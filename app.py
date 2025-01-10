@@ -119,26 +119,5 @@ def main():
             - Consider using aggregations when needed
             """)
 
-            # Add custom CSS for the button
-            st.markdown("""
-                <style>
-                .button {
-                    display: inline-block;
-                    padding: 0.5rem 1rem;
-                    background-color: #4CAF50;
-                    color: white !important;
-                    text-decoration: none;
-                    border-radius: 4px;
-                    text-align: center;
-                    margin: 0.5rem 0;
-                }
-                .button:hover {
-                    background-color: #45a049;
-                    color: white !important;
-                    text-decoration: none;
-                }
-                </style>
-                """, unsafe_allow_html=True)
-
 if __name__ == "__main__":
     main()
