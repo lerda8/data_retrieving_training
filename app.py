@@ -104,36 +104,36 @@ class SQLTrainer:
         return prompt
 
     def generate_stakeholder_question(self, industry: str) -> str:
-    """Generates a business question using Claude"""
-    schema_prompt = self.get_schema_prompt(industry)
+        """Generates a business question using Claude"""
+        schema_prompt = self.get_schema_prompt(industry)
+        
+        prompt = f"""
+        {schema_prompt}
     
-    prompt = f"""
-    {schema_prompt}
-
-    Act as a business stakeholder in the {industry} industry.
-    Ask for a report that requires SQL to generate.
-    Don't add any fluff, just ask for the data.
-    The question should be simple.
-    Only max 2 joins, SUM(), COUNT(), MIN(), MAX() functions should be needed.
-    
-    Example format:
-    "I need a report showing [business need]."
-    """
-    
-    response = self.client.messages.create(
-        model="claude-3-sonnet-20240229",
-        max_tokens=150,
-        temperature=0.7,
-        system="You are a business stakeholder asking for data.",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
-    
-    return response.content[0].text
+        Act as a business stakeholder in the {industry} industry.
+        Ask for a report that requires SQL to generate.
+        Don't add any fluff, just ask for the data.
+        The question should be simple.
+        Only max 2 joins, SUM(), COUNT(), MIN(), MAX() functions should be needed.
+        
+        Example format:
+        "I need a report showing [business need]."
+        """
+        
+        response = self.client.messages.create(
+            model="claude-3-sonnet-20240229",
+            max_tokens=150,
+            temperature=0.7,
+            system="You are a business stakeholder asking for data.",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+        
+        return response.content[0].text
 
     def validate_sql(self, query: str, industry: str, question: str) -> Dict:
         """Validates the SQL query using Claude"""
