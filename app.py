@@ -1,3 +1,22 @@
+import streamlit as st
+from typing import TypedDict, Dict, List, Optional
+import anthropic
+import json
+from datetime import datetime
+import time
+
+class SchemaDict(TypedDict):
+    schema_url: str
+    tables: Dict[str, List[str]]
+    relationships: List[str]
+    sample_data: Dict[str, List[Dict]]  # Added sample data
+
+class UserProgress(TypedDict):
+    correct_queries: int
+    total_attempts: int
+    last_question: str
+    bookmarks: List[str]
+
 class SQLTrainer:
     def __init__(self):
         if 'ANTHROPIC_API_KEY' not in st.secrets:
