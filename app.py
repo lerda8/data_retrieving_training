@@ -25,11 +25,6 @@ class SQLTrainer:
                     "inventory.warehouse_id -> warehouses.warehouse_id",
                     "shipments.origin_warehouse -> warehouses.warehouse_id",
                     "shipments.carrier_id -> carriers.carrier_id"
-                ],
-                "sample_questions": [
-                    "Show me which warehouses are below their reorder points for any items.",
-                    "List the top 3 carriers by number of shipments.",
-                    "Calculate the total inventory quantity by warehouse."
                 ]
             },
             "healthcare": {
@@ -45,11 +40,6 @@ class SQLTrainer:
                     "appointments.patient_id -> patients.patient_id",
                     "appointments.doctor_id -> doctors.doctor_id",
                     "treatments.patient_id -> patients.patient_id"
-                ],
-                "sample_questions": [
-                    "Show me the doctors with the most appointments this month.",
-                    "List patients who have had more than 3 treatments.",
-                    "Calculate the average number of appointments per doctor."
                 ]
             }
         }
@@ -107,22 +97,16 @@ class SQLTrainer:
             
         return query
 
-    def generate_stakeholder_question(self, industry: str, difficulty: str = "medium") -> Tuple[str, str]:
-        """Generates a business question using Claude with difficulty levels"""
+    def generate_stakeholder_question(self, industry: str) -> Tuple[str, str]:
+        """Generates a business question using Claude"""
         schema_prompt = self.get_schema_prompt(industry)
-        
-        difficulty_adjustments = {
-            "easy": "Use only simple SELECT statements with basic WHERE clauses. No joins required.",
-            "medium": "Use 1-2 joins and basic aggregation functions like COUNT, SUM.",
-            "hard": "Use multiple joins, subqueries, and advanced aggregation functions."
-        }
         
         prompt = f"""
         {schema_prompt}
     
         Act as a business stakeholder in the {industry} industry.
-        Generate a {difficulty} difficulty question that requires SQL to answer.
-        {difficulty_adjustments[difficulty]}
+        Generate a question that requires SQL to answer.
+        Use only max 2 joins and basic aggregation functions like COUNT, SUM.
         
         Return both the business question AND the correct SQL query to solve it.
         Format the response as:
@@ -141,14 +125,23 @@ class SQLTrainer:
             
             # Parse response to get question and solution
             content = response.content[0].text
-            question = re.search(r'QUESTION: (.*?)\nSQL:', content, re.DOTALL).group(1).strip()
-            solution = re.search(r'SQL: (.*?)$', content, re.DOTALL).group(1).strip()
+            question_match = re.search(r'QUESTION:\s*(.*?)\s*SQL:', content, re.DOTALL)
+            sql_match = re.search(r'SQL:\s*(.*?)$', content, re.DOTALL)
             
+            if not question_match or not sql_match:
+                raise ValueError("Could not parse question and SQL from response")
+                
+            question = question_match.group(1).strip()
+            solution = sql_match.group(1).strip()
+            
+            if not question or not solution:
+                raise ValueError("Empty question or SQL solution")
+                
             return question, solution
             
         except Exception as e:
             st.error(f"Error generating question: {str(e)}")
-            return "Error generating question", ""
+            return "Failed to generate question. Please try again.", ""
 
     def validate_sql(self, query: str, industry: str, question: str, correct_sql: str) -> Dict:
         """Validates the SQL query using Claude with enhanced feedback"""
@@ -210,22 +203,6 @@ class SQLTrainer:
                 "performance_notes": ""
             }
 
-def render_schema_viewer(schema: Dict):
-    """Render an interactive schema viewer"""
-    st.write("### Database Schema")
-    
-    # Show tables in an expandable section
-    with st.expander("Tables", expanded=True):
-        for table, columns in schema["tables"].items():
-            st.write(f"**{table}**")
-            for col in columns:
-                st.write(f"- {col}")
-    
-    # Show relationships
-    with st.expander("Relationships", expanded=True):
-        for rel in schema["relationships"]:
-            st.write(f"- {rel}")
-
 def render_progress_tracker():
     """Render user progress statistics"""
     stats = st.session_state.user_stats
@@ -255,7 +232,6 @@ def main():
         st.session_state.industry = None
         st.session_state.current_question = None
         st.session_state.current_solution = None
-        st.session_state.difficulty = "medium"
     
     st.title("SQL Training Assistant 🎓")
     
@@ -277,15 +253,8 @@ def main():
                 format_func=lambda x: x.title()
             )
             
-            difficulty = st.select_slider(
-                "Select difficulty level:",
-                options=["easy", "medium", "hard"],
-                value="medium"
-            )
-            
             if st.button("Start Training ▶️", type="primary"):
                 st.session_state.industry = industry
-                st.session_state.difficulty = difficulty
                 st.rerun()
         
         with col2:
@@ -295,7 +264,6 @@ def main():
             - 📊 Interactive schema viewer
             - 🎓 Detailed feedback
             - 📈 Progress tracking
-            - 🌟 Multiple difficulty levels
             """)
     
     # Main training interface
@@ -307,8 +275,7 @@ def main():
             if st.button("Get New Question 🎯") or not st.session_state.current_question:
                 with st.spinner('Generating new question... 🤔'):
                     question, solution = trainer.generate_stakeholder_question(
-                        st.session_state.industry,
-                        st.session_state.difficulty
+                        st.session_state.industry
                     )
                     st.session_state.current_question = question
                     st.session_state.current_solution = solution
@@ -347,41 +314,28 @@ def main():
                     st.code(st.session_state.current_solution, language="sql")
         
         with col2:
-            st.write("### Training Controls")
+            st.header("Help")
             
-            # Difficulty selector
-            new_difficulty = st.select_slider(
-                "Adjust difficulty:",
-                options=["easy", "medium", "hard"],
-                value=st.session_state.difficulty
-            )
-            
-            if new_difficulty != st.session_state.difficulty:
-                st.session_state.difficulty = new_difficulty
-                st.session_state.current_question = None
-                st.rerun()
-            
-            # Industry selector
+            # Change Industry button
             if st.button("Change Industry 🔄"):
                 st.session_state.industry = None
                 st.session_state.current_question = None
                 st.rerun()
             
-            # Schema viewer
-            render_schema_viewer(trainer.industry_schemas[st.session_state.industry])
+            # Schema URL button
+            schema_url = trainer.industry_schemas[st.session_state.industry]["schema_url"]
+            st.link_button("View Database Schema 📊", schema_url)
             
             # Progress tracker
             render_progress_tracker()
             
             # Tips section
-            with st.expander("SQL Tips 💡", expanded=False):
-                st.write("""
-                - Use appropriate JOIN types (INNER, LEFT, RIGHT)
-                - Always alias tables in joins for better readability
-                - Use meaningful column names in your SELECT clause
-                - Consider performance with large datasets
-                - Format your query for better readability
-                """)
+            st.write("### Tips 💡")
+            st.write("""
+            - 🔗 Make sure to include all necessary JOINs
+            - 🎯 Remember to use appropriate WHERE clauses
+            - 📊 Consider using aggregations when needed
+            """)
 
 if __name__ == "__main__":
     main()
