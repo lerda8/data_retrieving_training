@@ -1,3 +1,114 @@
+import streamlit as st
+from typing import TypedDict, Dict, List, Optional
+import anthropic
+import json
+from datetime import datetime
+import time
+
+class SchemaDict(TypedDict):
+    schema_url: str
+    tables: Dict[str, List[str]]
+    relationships: List[str]
+    sample_data: Dict[str, List[Dict]]  # Added sample data
+
+class UserProgress(TypedDict):
+    correct_queries: int
+    total_attempts: int
+    last_question: str
+    bookmarks: List[str]
+
+class SQLTrainer:
+    def __init__(self):
+        if 'ANTHROPIC_API_KEY' not in st.secrets:
+            raise RuntimeError("ANTHROPIC_API_KEY not found in secrets.toml")
+            
+        self.client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+        self._load_schemas()
+        
+    def _load_schemas(self):
+        """Load schemas from configuration file"""
+        try:
+            with open('schemas.json', 'r') as f:
+                self.industry_schemas: Dict[str, SchemaDict] = json.load(f)
+        except FileNotFoundError:
+            # Fallback to built-in schemas
+            self.industry_schemas = {...}  # Original schemas here
+
+    def get_hint(self, question: str, industry: str) -> str:
+        """Generate a hint without revealing the full solution"""
+        schema_prompt = self.get_schema_prompt(industry)
+        
+        prompt = f"""
+        {schema_prompt}
+        
+        For this question: "{question}"
+        
+        Provide a helpful hint that guides the user toward the solution without giving it away.
+        Focus on the key concepts needed to solve this problem.
+        """
+        
+        try:
+            response = self.client.messages.create(
+                model="claude-3-sonnet-20240229",
+                max_tokens=150,
+                temperature=0.5,
+                system="You are a helpful SQL tutor providing guidance.",
+                messages=[{"role": "user", "content": prompt}]
+            )
+            return response.content[0].text
+        except Exception as e:
+            return f"Unable to generate hint: {str(e)}"
+
+    def validate_sql(self, query: str, industry: str, question: str) -> Dict:
+        """Validates the SQL query with enhanced error handling"""
+        if not query.strip():
+            return {
+                "is_correct": False,
+                "feedback": "Query cannot be empty",
+                "hint": "Please enter a SQL query",
+                "correct_query": None
+            }
+
+        # Basic SQL syntax validation
+        if not self._validate_basic_syntax(query):
+            return {
+                "is_correct": False,
+                "feedback": "Invalid SQL syntax",
+                "hint": "Check your SQL syntax",
+                "correct_query": None
+            }
+
+        try:
+            return super().validate_sql(query, industry, question)
+        except Exception as e:
+            return {
+                "is_correct": False,
+                "feedback": f"Error validating query: {str(e)}",
+                "hint": "Please try again",
+                "correct_query": None
+            }
+
+    def _validate_basic_syntax(self, query: str) -> bool:
+        """Basic SQL syntax validation"""
+        required_keywords = ['SELECT', 'FROM']
+        query_upper = query.upper()
+        return all(keyword in query_upper for keyword in required_keywords)
+
+    def update_user_progress(self, correct: bool):
+        """Update user progress in session state"""
+        if 'user_progress' not in st.session_state:
+            st.session_state.user_progress = UserProgress(
+                correct_queries=0,
+                total_attempts=0,
+                last_question="",
+                bookmarks=[]
+            )
+        
+        progress = st.session_state.user_progress
+        progress['total_attempts'] += 1
+        if correct:
+            progress['correct_queries'] += 1
+
 def main():
     st.set_page_config(layout="wide")
     
