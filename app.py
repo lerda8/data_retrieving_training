@@ -17,6 +17,7 @@ def check_password():
         else:
             st.session_state["password_correct"] = False
 
+    # First run or password not yet entered
     if "password_correct" not in st.session_state:
         st.text_input(
             "Password", 
@@ -26,9 +27,11 @@ def check_password():
         )
         return False
     
+    # Password already entered and correct
     elif st.session_state["password_correct"]:
         return True
     
+    # Password entered but incorrect
     else:
         st.text_input(
             "Password", 
@@ -41,14 +44,14 @@ def check_password():
 
 class SQLTrainer:
     def __init__(self):
-        if 'ANTHROPIC_API_KEY' not in st.secrets:
-            raise RuntimeError("ANTHROPIC_API_KEY not found in secrets.toml")
-        if 'SUPABASE_URL' not in st.secrets or 'SUPABASE_KEY' not in st.secrets:
-            raise RuntimeError("Supabase credentials not found in secrets.toml")
+        # Check for required secrets
+        required_secrets = ['ANTHROPIC_API_KEY', 'SUPABASE_URL', 'SUPABASE_KEY']
+        missing_secrets = [secret for secret in required_secrets if secret not in st.secrets]
+        if missing_secrets:
+            raise RuntimeError(f"Missing required secrets: {', '.join(missing_secrets)}")
             
         self.client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
         self.supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
-        
         self.industry_schemas: Dict[str, Dict] = {
             "logistics": {
                 "schema_url": "https://claude.site/artifacts/bf15ac3a-7ad0-4693-80ab-0bdcfa1cd2ae",
@@ -83,9 +86,7 @@ class SQLTrainer:
     def execute_query(self, query: str) -> Dict:
         """Executes the SQL query against Supabase database"""
         try:
-            # Execute the query using Supabase
             result = self.supabase.rpc('execute_query', {'query_text': query}).execute()
-            
             return {
                 "success": True,
                 "data": result.data,
@@ -109,7 +110,7 @@ def main():
     try:
         trainer = SQLTrainer()
     except RuntimeError as e:
-        st.error("Error: Required credentials not found in secrets.toml")
+        st.error(f"Error: {str(e)}")
         return
     
     if 'industry' not in st.session_state:
@@ -142,10 +143,11 @@ def main():
             
             user_query = st.text_area("Your SQL Query: ⌨️", height=150)
             
-            col1_1, col1_2 = st.columns(2)
+            # Create two columns for the buttons
+            button_col1, button_col2 = st.columns(2)
             
-            with col1_1:
-                if st.button("Submit Query for Validation 🔍"):
+            with button_col1:
+                if st.button("Submit for Validation 🔍"):
                     if user_query:
                         with st.spinner('Analyzing your SQL code... 🔍'):
                             feedback = trainer.validate_sql(
@@ -159,16 +161,17 @@ def main():
                         else:
                             st.error("❌ " + feedback["feedback"])
             
-            with col1_2:
+            with button_col2:
                 if st.button("Query Database 📊"):
                     if user_query:
-                        with st.spinner('Executing query... 💫'):
+                        with st.spinner('Executing query... 🔄'):
                             result = trainer.execute_query(user_query)
                             
-                        if result["success"]:
-                            st.dataframe(result["data"])
-                        else:
-                            st.error(f"Query execution failed: {result['error']}")
+                            if result["success"]:
+                                st.write("### Query Results")
+                                st.dataframe(result["data"])
+                            else:
+                                st.error(f"Query Error: {result['error']}")
         
         with col2:
             st.header("Help")
@@ -186,6 +189,8 @@ def main():
             - 🔗 Make sure to include all necessary JOINs
             - 🎯 Remember to use appropriate WHERE clauses
             - 📊 Consider using aggregations when needed
+            - 🚀 Use 'Submit for Validation' to check your query
+            - 🔍 Use 'Query Database' to see actual results
             """)
 
 if __name__ == "__main__":
