@@ -1,113 +1,60 @@
-import streamlit as st
-from typing import TypedDict, Dict, List, Optional
-import anthropic
-import json
-from datetime import datetime
-import time
-
-class SchemaDict(TypedDict):
-    schema_url: str
-    tables: Dict[str, List[str]]
-    relationships: List[str]
-    sample_data: Dict[str, List[Dict]]  # Added sample data
-
-class UserProgress(TypedDict):
-    correct_queries: int
-    total_attempts: int
-    last_question: str
-    bookmarks: List[str]
-
 class SQLTrainer:
     def __init__(self):
         if 'ANTHROPIC_API_KEY' not in st.secrets:
             raise RuntimeError("ANTHROPIC_API_KEY not found in secrets.toml")
             
         self.client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
-        self._load_schemas()
-        
-    def _load_schemas(self):
-        """Load schemas from configuration file"""
-        try:
-            with open('schemas.json', 'r') as f:
-                self.industry_schemas: Dict[str, SchemaDict] = json.load(f)
-        except FileNotFoundError:
-            # Fallback to built-in schemas
-            self.industry_schemas = {...}  # Original schemas here
-
-    def get_hint(self, question: str, industry: str) -> str:
-        """Generate a hint without revealing the full solution"""
-        schema_prompt = self.get_schema_prompt(industry)
-        
-        prompt = f"""
-        {schema_prompt}
-        
-        For this question: "{question}"
-        
-        Provide a helpful hint that guides the user toward the solution without giving it away.
-        Focus on the key concepts needed to solve this problem.
-        """
-        
-        try:
-            response = self.client.messages.create(
-                model="claude-3-sonnet-20240229",
-                max_tokens=150,
-                temperature=0.5,
-                system="You are a helpful SQL tutor providing guidance.",
-                messages=[{"role": "user", "content": prompt}]
-            )
-            return response.content[0].text
-        except Exception as e:
-            return f"Unable to generate hint: {str(e)}"
-
-    def validate_sql(self, query: str, industry: str, question: str) -> Dict:
-        """Validates the SQL query with enhanced error handling"""
-        if not query.strip():
-            return {
-                "is_correct": False,
-                "feedback": "Query cannot be empty",
-                "hint": "Please enter a SQL query",
-                "correct_query": None
+        # Initialize industry_schemas as a dictionary
+        self.industry_schemas = {
+            "logistics": {
+                "schema_url": "https://claude.site/artifacts/bf15ac3a-7ad0-4693-80ab-0bdcfa1cd2ae",
+                "tables": {
+                    "warehouses": ["warehouse_id", "name", "location", "capacity"],
+                    "inventory": ["item_id", "warehouse_id", "product_name", "quantity", "reorder_point"],
+                    "shipments": ["shipment_id", "origin_warehouse", "destination", "status", "carrier_id"],
+                    "carriers": ["carrier_id", "name", "service_level", "cost_per_mile"]
+                },
+                "relationships": [
+                    "inventory.warehouse_id -> warehouses.warehouse_id",
+                    "shipments.origin_warehouse -> warehouses.warehouse_id",
+                    "shipments.carrier_id -> carriers.carrier_id"
+                ]
+            },
+            "healthcare": {
+                "schema_url": "https://claude.site/artifacts/96e82497-f107-4e25-97c1-220b727b1c3b",
+                "tables": {
+                    "patients": ["patient_id", "name", "dob", "insurance_id"],
+                    "appointments": ["appointment_id", "patient_id", "doctor_id", "date", "status"],
+                    "doctors": ["doctor_id", "name", "specialty", "department"],
+                    "treatments": ["treatment_id", "patient_id", "doctor_id", "diagnosis", "date"]
+                },
+                "relationships": [
+                    "appointments.patient_id -> patients.patient_id",
+                    "appointments.doctor_id -> doctors.doctor_id",
+                    "treatments.patient_id -> patients.patient_id"
+                ]
             }
+        }
 
-        # Basic SQL syntax validation
-        if not self._validate_basic_syntax(query):
-            return {
-                "is_correct": False,
-                "feedback": "Invalid SQL syntax",
-                "hint": "Check your SQL syntax",
-                "correct_query": None
-            }
-
-        try:
-            return super().validate_sql(query, industry, question)
-        except Exception as e:
-            return {
-                "is_correct": False,
-                "feedback": f"Error validating query: {str(e)}",
-                "hint": "Please try again",
-                "correct_query": None
-            }
-
-    def _validate_basic_syntax(self, query: str) -> bool:
-        """Basic SQL syntax validation"""
-        required_keywords = ['SELECT', 'FROM']
-        query_upper = query.upper()
-        return all(keyword in query_upper for keyword in required_keywords)
-
-    def update_user_progress(self, correct: bool):
-        """Update user progress in session state"""
-        if 'user_progress' not in st.session_state:
-            st.session_state.user_progress = UserProgress(
-                correct_queries=0,
-                total_attempts=0,
-                last_question="",
-                bookmarks=[]
-            )
+    def get_schema_prompt(self, industry: str) -> str:
+        """Creates a detailed prompt describing the database schema"""
+        schema = self.industry_schemas.get(industry)
+        if not schema:
+            return "Industry not found"
+            
+        prompt = f"Database Schema for {industry.title()}:\n\n"
         
-        progress = st.session_state.user_progress
-        progress['total_attempts'] += 1
-        if correct:
-            progress['correct_queries'] += 1
+        # Add tables
+        prompt += "Tables:\n"
+        for table, columns in schema["tables"].items():
+            prompt += f"- {table} ({', '.join(columns)})\n"
+        
+        # Add relationships
+        prompt += "\nRelationships:\n"
+        for rel in schema["relationships"]:
+            prompt += f"- {rel}\n"
+            
+        return prompt
 
 def main():
     st.set_page_config(layout="wide")
@@ -134,9 +81,11 @@ def main():
     # Industry selection (only shown at start)
     if not st.session_state.industry:
         st.header("Select Industry 🏭")
+        # Get the list of industries from the dictionary keys
+        industries = list(trainer.industry_schemas.keys())
         industry = st.selectbox(
             "What industry do you work in?",
-            list(trainer.industry_schemas.keys())
+            industries
         )
         if st.button("Start Training ▶️"):
             st.session_state.industry = industry
