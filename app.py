@@ -5,6 +5,7 @@ import json
 import webbrowser
 import hmac
 from supabase import create_client
+import random
 
 def check_password():
     """Returns `True` if the user had the correct password."""
