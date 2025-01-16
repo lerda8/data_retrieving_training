@@ -125,24 +125,29 @@ class SQLTrainer:
         schema_prompt = self.get_schema_prompt(industry)
         
         prompt = f"""
-        {schema_prompt}
-    
-        You are a business stakeholder in the {industry} industry who needs data for analysis.
-        Generate ONE business question that can be answered with SQL.
-    
-        Requirements:
-        - Question must be specific and actionable
-        - Query should require at most 1 JOIN
-        - Can use basic aggregations (SUM, COUNT, MIN, MAX)
-        - Focus on practical business metrics (revenue, customers, products, etc.)
-        - Must be answerable using the schema provided above
-    
-        Format your response as:
-        "I need a report showing [specific metric] for [specific business purpose]."
-    
-        Example good questions:
-        - I need a report showing total revenue by product category for Q1 2024.
-        - I need a report showing our top 10 customers by order volume last month.
+            {schema_prompt}
+        
+            You are a business stakeholder in the {industry} industry who needs data for analysis.
+            Generate ONE business question that can be answered with SQL.
+        
+            The database contains:
+            - Warehouses with inventory
+            - Products with quantities and minimum stock levels
+            - Active shipments and orders
+            
+            Focus your question on:
+            - Current inventory levels
+            - Basic warehouse statistics
+            - Simple product counts
+            
+            Requirements:
+            - Question must be specific and actionable
+            - Query should require at most 1 JOIN
+            - Can use basic aggregations (SUM, COUNT, MIN, MAX)
+            - Must be answerable using basic warehouse/inventory metrics
+            
+            Format your response as:
+            "I need a report showing [specific metric] for [specific business purpose]."
         """
         
         response = self.client.messages.create(
