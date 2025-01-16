@@ -54,17 +54,34 @@ class SQLTrainer:
         self.supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
         self.industry_schemas: Dict[str, Dict] = {
             "logistics": {
-                "schema_url": "https://claude.site/artifacts/98ddf448-03e9-496c-928a-48d0604d4759",
+                "schema_url": "https://claude.site/artifacts/98ddf448-03e9-496c-928a-48d0604d4759", 
                 "tables": {
-                    "warehouses": ["warehouse_id", "name", "location", "capacity"],
-                    "inventory": ["item_id", "warehouse_id", "product_name", "quantity", "reorder_point"],
-                    "shipments": ["shipment_id", "origin_warehouse", "destination", "status", "carrier_id"],
-                    "carriers": ["carrier_id", "name", "service_level", "cost_per_mile"]
+                    "products": ["product_id", "sku", "name", "description", "category", "unit_weight", "unit_volume", "base_price", "minimum_stock", "is_active"],
+                    "warehouses": ["warehouse_id", "name", "address", "city", "state", "zip_code", "total_capacity", "temperature_controlled", "operating_hours", "status"],
+                    "zones": ["zone_id", "warehouse_id", "zone_name", "zone_type", "capacity", "temperature_range"],
+                    "inventory": ["inventory_id", "product_id", "warehouse_id", "zone_id", "quantity", "lot_number", "expiration_date", "last_counted_date"],
+                    "suppliers": ["supplier_id", "name", "contact_person", "email", "phone", "address", "payment_terms", "rating", "active"],
+                    "purchase_orders": ["po_id", "supplier_id", "warehouse_id", "order_date", "expected_delivery", "status", "total_amount"],
+                    "po_items": ["po_item_id", "po_id", "product_id", "quantity", "unit_price"],
+                    "employees": ["employee_id", "first_name", "last_name", "email", "phone", "role", "warehouse_id", "hire_date", "certification"],
+                    "shipments": ["shipment_id", "warehouse_id", "destination_address", "carrier", "tracking_number", "status", "ship_date", "estimated_delivery", "actual_delivery"],
+                    "shipment_items": ["shipment_item_id", "shipment_id", "product_id", "quantity", "picked_by", "picked_from_zone"]
                 },
                 "relationships": [
+                    "zones.warehouse_id -> warehouses.warehouse_id",
+                    "inventory.product_id -> products.product_id",
                     "inventory.warehouse_id -> warehouses.warehouse_id",
-                    "shipments.origin_warehouse -> warehouses.warehouse_id",
-                    "shipments.carrier_id -> carriers.carrier_id"
+                    "inventory.zone_id -> zones.zone_id",
+                    "purchase_orders.supplier_id -> suppliers.supplier_id",
+                    "purchase_orders.warehouse_id -> warehouses.warehouse_id",
+                    "po_items.po_id -> purchase_orders.po_id",
+                    "po_items.product_id -> products.product_id",
+                    "employees.warehouse_id -> warehouses.warehouse_id",
+                    "shipments.warehouse_id -> warehouses.warehouse_id",
+                    "shipment_items.shipment_id -> shipments.shipment_id",
+                    "shipment_items.product_id -> products.product_id",
+                    "shipment_items.picked_by -> employees.employee_id",
+                    "shipment_items.picked_from_zone -> zones.zone_id"
                 ]
             },
             "healthcare": {
