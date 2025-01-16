@@ -141,8 +141,8 @@ class SQLTrainer:
         "I need a report showing [specific metric] for [specific business purpose]."
     
         Example good questions:
-        - "I need a report showing total revenue by product category for Q1 2024."
-        - "I need a report showing our top 10 customers by order volume last month."
+        - I need a report showing total revenue by product category for Q1 2024.
+        - I need a report showing our top 10 customers by order volume last month.
         """
         
         response = self.client.messages.create(
