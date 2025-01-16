@@ -147,7 +147,7 @@ class SQLTrainer:
         The user provided this SQL query:
         {query}
         
-        Please analyze if this query correctly answers the question. Provide:
+        Please analyze if this query correctly answers the question. The query should follow PostgressSQL syntax. Provide:
         1. Whether the query is correct (yes/no)
         2. Specific feedback about what's right or wrong
         3. A hint if the query needs improvement
