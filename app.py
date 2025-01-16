@@ -54,7 +54,7 @@ class SQLTrainer:
         self.supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
         self.industry_schemas: Dict[str, Dict] = {
             "logistics": {
-                "schema_url": "https://claude.site/artifacts/bf15ac3a-7ad0-4693-80ab-0bdcfa1cd2ae",
+                "schema_url": "https://claude.site/artifacts/98ddf448-03e9-496c-928a-48d0604d4759",
                 "tables": {
                     "warehouses": ["warehouse_id", "name", "location", "capacity"],
                     "inventory": ["item_id", "warehouse_id", "product_name", "quantity", "reorder_point"],
