@@ -127,15 +127,22 @@ class SQLTrainer:
         prompt = f"""
         {schema_prompt}
     
-        Act as a business stakeholder in the {industry} industry.
-        Ask for a report that requires SQL to generate.
-        Don't add any fluff, just ask for the data.
-        The question should be simple.
-        At most 1 JOIN should be needed for the query.
-        SUM(), COUNT(), MIN(), MAX() can be needed.
-        
-        Example format:
-        "I need a report showing [business need]."
+        You are a business stakeholder in the {industry} industry who needs data for analysis.
+        Generate ONE business question that can be answered with SQL.
+    
+        Requirements:
+        - Question must be specific and actionable
+        - Query should require at most 1 JOIN
+        - Can use basic aggregations (SUM, COUNT, MIN, MAX)
+        - Focus on practical business metrics (revenue, customers, products, etc.)
+        - Must be answerable using the schema provided above
+    
+        Format your response as:
+        "I need a report showing [specific metric] for [specific business purpose]."
+    
+        Example good questions:
+        - "I need a report showing total revenue by product category for Q1 2024."
+        - "I need a report showing our top 10 customers by order volume last month."
         """
         
         response = self.client.messages.create(
@@ -145,7 +152,7 @@ class SQLTrainer:
             system="You are a business stakeholder asking for data.",
             messages=[
                 {
-                    "role": "user",
+                    "role": "user", 
                     "content": prompt
                 }
             ]
