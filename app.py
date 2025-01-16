@@ -99,7 +99,26 @@ class SQLTrainer:
                 ]
             }
         }
-
+        self.question_topics = {
+        "logistics": {
+            "inventory_analysis": {
+                "focus": ["current stock levels", "reorder points", "product availability", "inventory by warehouse"],
+                "metrics": ["total quantity", "number of products", "storage utilization", "low stock items"]
+            },
+            "warehouse_operations": {
+                "focus": ["zone usage", "warehouse capacity", "temperature controlled storage", "warehouse status"],
+                "metrics": ["total capacity", "available space", "zone distribution", "facility utilization"]
+            },
+            "supplier_insights": {
+                "focus": ["supplier performance", "order status", "delivery tracking", "supplier ratings"],
+                "metrics": ["active suppliers", "pending orders", "order volumes", "supplier ratings"]
+            },
+            "shipping_status": {
+                "focus": ["current shipments", "carrier usage", "delivery performance", "shipping volume"],
+                "metrics": ["active shipments", "items shipped", "shipping capacity", "delivery status"]
+            }
+        }
+    }
     def get_schema_prompt(self, industry: str) -> str:
         """Creates a detailed prompt describing the database schema"""
         schema = self.industry_schemas.get(industry)
@@ -124,27 +143,29 @@ class SQLTrainer:
         """Generates a business question using Claude"""
         schema_prompt = self.get_schema_prompt(industry)
         
+        # Get random topic and its details
+        if industry not in self.question_topics:
+            return "Industry not supported for question generation"
+            
+        topic = random.choice(list(self.question_topics[industry].keys()))
+        topic_details = self.question_topics[industry][topic]
+        
         prompt = f"""
             {schema_prompt}
         
             You are a business stakeholder in the {industry} industry who needs data for analysis.
             Generate ONE business question that can be answered with SQL.
-        
-            The database contains:
-            - Warehouses with inventory
-            - Products with quantities and minimum stock levels
-            - Active shipments and orders
             
-            Focus your question on:
-            - Current inventory levels
-            - Basic warehouse statistics
-            - Simple product counts
+            Topic area: {topic}
+            Focus on: {random.choice(topic_details['focus'])}
+            Key metric: {random.choice(topic_details['metrics'])}
             
             Requirements:
             - Question must be specific and actionable
             - Query should require at most 1 JOIN
             - Can use basic aggregations (SUM, COUNT, MIN, MAX)
-            - Must be answerable using basic warehouse/inventory metrics
+            - Must be answerable using the schema provided
+            - Focus on practical business insights
             
             Format your response as:
             "I need a report showing [specific metric] for [specific business purpose]."
