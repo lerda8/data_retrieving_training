@@ -151,7 +151,7 @@ class SQLTrainer:
         1. Whether the query is correct (yes/no)
         2. Specific feedback about what's right or wrong
         3. A hint if the query needs improvement
-        4. The correct query if the user's query is wrong
+        4. The correct query if the user's query is wrong.
         """
         
         response = self.client.messages.create(
@@ -180,20 +180,23 @@ class SQLTrainer:
         }
     
     def execute_query(self, query: str) -> Dict:
-        """Executes the SQL query against Supabase database"""
-        try:
-            result = self.supabase.rpc('execute_query', {'query_text': query}).execute()
-            return {
-                "success": True,
-                "data": result.data,
-                "error": None
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "data": None,
-                "error": str(e)
-            }
+    """Executes the SQL query against Supabase database"""
+    try:
+        # Remove trailing semicolon and whitespace
+        cleaned_query = query.strip().rstrip(';')
+        
+        result = self.supabase.rpc('execute_query', {'query_text': cleaned_query}).execute()
+        return {
+            "success": True,
+            "data": result.data,
+            "error": None
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "data": None,
+            "error": str(e)
+        }
 
 def main():
     st.set_page_config(layout="wide")
